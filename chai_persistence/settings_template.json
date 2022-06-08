@@ -1,0 +1,6 @@
+{
+    "database": "data.db",
+    "db_in_memory": false,
+    "enable_debugging": false,
+    "client_secret": "eQdEx..."
+}
