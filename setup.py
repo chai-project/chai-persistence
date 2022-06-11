@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="chai-persistence",
-    packages=["chai-persistence"],
+    packages=["chai_persistence"],
     version="0.1.0",
     description="Log and handle requests from upstream, and implement polling to store values from downstream.",
     author="Kim Bauters",
