@@ -100,9 +100,9 @@ class Homes(metaclass=SingletonMeta):
         :param home_label: The unique label of the home you want to access information from.
         :return: The current power reading in W, or None if the reading could not be retrieved.
         """
-        _, h_i = self._home_interfaces[home_label]
-        if not h_i:
+        if home_label not in self._home_interfaces:
             return None
+        _, h_i = self._home_interfaces[home_label]
         return h_i.power_current.value
 
     def get_temperature(self, home_label: str, device: DeviceType) -> Optional[float]:
@@ -111,9 +111,9 @@ class Homes(metaclass=SingletonMeta):
         :param device: The device from which you want to retrieve the value.
         :return: The temperature in Celsius of the specified device, or None if the reading could not be retrieved.
         """
-        _, h_i = self._home_interfaces[home_label]
-        if not h_i:
+        if home_label not in self._home_interfaces:
             return None
+        _, h_i = self._home_interfaces[home_label]
         return h_i.thermostat_temperature if device == DeviceType.THERMOSTAT else h_i.valve_temperature
 
     def set_device(self, *, home_label: str,
@@ -128,9 +128,9 @@ class Homes(metaclass=SingletonMeta):
         :param minutes: When using .MAX or .MANUAL: the duration of this mode before the device reverts.
         :return: True if the API reported success, False otherwise.
         """
-        _, h_i = self._home_interfaces[home_label]
-        if not h_i:
+        if home_label not in self._home_interfaces:
             return False
+        _, h_i = self._home_interfaces[home_label]
         return h_i.set_device(device=device, mode=mode, temperature=temperature, minutes=minutes)
 
 
