@@ -91,7 +91,7 @@ class Homes(metaclass=SingletonMeta):
                                             netatmo_refresh_token=home.relay.refresh_token,
                                             client_id=self._config.client_id, client_secret=self._config.client_secret)
                         self._home_interfaces[home.label] = (home.id, h_i)
-                    print("started all interfaces")
+                    print(f"started all interfaces with client ID {self._config.client_id} and secret {self._config.client_secret}")
 
             sleep(sleep_duration)
 
@@ -116,6 +116,16 @@ class Homes(metaclass=SingletonMeta):
         _, h_i = self._home_interfaces[home_label]
         return h_i.thermostat_temperature if device == DeviceType.THERMOSTAT else h_i.valve_temperature
 
+    def get_valve_status(self, home_label: str) -> Optional[bool]:
+        """ Get the current status of the valve.
+        :param home_label: The unique label of the home you want to access information from.
+        :return: True if the valve is open, False if it is closed, or None if the reading could not be retrieved.
+        """
+        if home_label not in self._home_interfaces:
+            return None
+        _, h_i = self._home_interfaces[home_label]
+        return h_i.valve_on
+
     def set_device(self, *, home_label: str,
                    device: DeviceType, mode: SetpointMode = SetpointMode.MANUAL,
                    temperature: Optional[int] = None, minutes: Optional[int] = None) -> bool:
@@ -134,6 +144,4 @@ class Homes(metaclass=SingletonMeta):
         return h_i.set_device(device=device, mode=mode, temperature=temperature, minutes=minutes)
 
 
-# homes_api = Homes()
-# sleep(1)
-# print(homes_api.get_temperature("first_home", DeviceType.THERMOSTAT))
+# TODO: why is this line called twice?

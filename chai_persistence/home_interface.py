@@ -57,6 +57,11 @@ class HomeInterface:
         """ The temperature reported by the Netatmo thermostatic valve. """
         return self._relay.valve_temperature
 
+    @property
+    def valve_on(self) -> bool:
+        """ Whether the valve is currently on. """
+        return self._relay.valve_on
+
     # TODO: depending on use in project this can be an interface to the on/off or to the specific setpoint change
     def set_device(self, *, device: DeviceType, mode: SetpointMode = SetpointMode.MANUAL,
                    temperature: Optional[int] = None, minutes: Optional[int] = None) -> bool:
