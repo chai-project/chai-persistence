@@ -11,6 +11,6 @@ setup(
     install_requires=["pendulum",  # handle datetime instances with ease
                       "sqlalchemy",  # SQL database ORM solution
                       "pause",  # convenient sleeping based on target times
-                      # chai_data_sources
+                      # "chai_data_sources",
                       ],
 )
