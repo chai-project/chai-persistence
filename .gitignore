@@ -1,11 +1,7 @@
 .DS_Store
 .idea/
-
-# security
-settings.json
-
-# storage
-data.db
+*.toml
+*.db
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

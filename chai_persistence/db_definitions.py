@@ -1,13 +1,21 @@
 # pylint: disable=line-too-long, missing-module-docstring, too-few-public-methods, missing-class-docstring
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, TIMESTAMP, Index
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import scoped_session
 
-from chai_persistence.utilities import Configuration
+
+@dataclass
+class Configuration:
+    server: str
+    username: str
+    password: str
+    database: str = "chai"
+    enable_debugging: bool = False
 
 
 def db_engine(config: Configuration):
@@ -16,8 +24,8 @@ def db_engine(config: Configuration):
     :param config: The configuration to use to initialise the database engine.
     :return: A database engine connection.
     """
-    target = "sqlite:///:memory:" if config.db_in_memory else f"sqlite:///{config.database}?check_same_thread=False"
-    return create_engine(target, echo=config.enable_debugging, future=True)
+    target = f"postgresql+pg8000://{config.username}:{config.password}@{config.server}/{config.database}"
+    return create_engine(target, echo=config.enable_debugging, future=True, client_encoding="utf8")
 
 
 @contextmanager
@@ -45,65 +53,34 @@ def db_session(st_session: scoped_session):
         _session.close()
 
 
+# database naming convention is to use camelCase and singular nouns throughout
+
 Base = declarative_base()
 
 
-class Efergy(Base):
-    __tablename__ = "efergy"
+class NetatmoDevice(Base):
+    __tablename__ = "netatmodevice"
     id = Column(Integer, primary_key=True)
-    token = Column(String)
-    readings = relationship("EfergyReading", back_populates="meter")
-
-
-class Netatmo(Base):
-    __tablename__ = "netatmo"
-    id = Column(Integer, primary_key=True)
-    refresh_token = Column(String)
+    refreshToken = Column("refreshtoken", String, nullable=False)
     readings = relationship("NetatmoReading", back_populates="relay")
 
 
 class Home(Base):
-    __tablename__ = "homes"
+    __tablename__ = "home"
     id = Column(Integer, primary_key=True)
-    label = Column(String)
-    revision = Column(DateTime)
-    efergy_id = Column(Integer, ForeignKey("efergy.id"))
-    netatmo_id = Column(Integer, ForeignKey("netatmo.id"))
-    meter: Efergy = relationship("Efergy")
-    relay: Netatmo = relationship("Netatmo")
-
-
-class EfergyReading(Base):
-    __tablename__ = "efergy_readings"
-    id = Column(Integer, primary_key=True)
-    efergy_id = Column(Integer, ForeignKey("efergy.id"))
-    start = Column(DateTime)
-    end = Column(DateTime)
-    reading = Column(Float)
-    meter = relationship("Efergy", back_populates="readings")
+    label = Column(String, nullable=False)
+    revision = Column(TIMESTAMP, nullable=False)
+    netatmoID = Column("netatmoid", Integer, ForeignKey("netatmodevice.id"), nullable=False)
+    relay: NetatmoDevice = relationship("NetatmoDevice")
 
 
 class NetatmoReading(Base):
-    __tablename__ = "netatmo_readings"
+    __tablename__ = "netatmoreading"
     id = Column(Integer, primary_key=True)
-    netatmo_id = Column(Integer, ForeignKey("netatmo.id"))
-    start = Column(DateTime)
-    end = Column(DateTime)
-    room_type = Column(Integer)
-    reading = Column(Float)
-    relay = relationship("Netatmo", back_populates="readings")
-
-
-class SetpointChange(Base):
-    __tablename__ = "setpoint_changes"
-    id = Column(Integer, primary_key=True)
-    netatmo_id = Column(Integer, ForeignKey("netatmo.id"))
-    time = Column(DateTime)
-    room_type = Column(Integer)
-    mode = Column(String)
-    temperature = Column(Integer, nullable=True)
-    duration = Column(Integer, nullable=True)
-
-
-if __name__ == "__main__":
-    pass
+    room_id = Column("roomid", Integer, nullable=False)  # 1 for thermostat temp, 2 for valve temp, 3 for valve %
+    netatmo_id = Column("netatmoid", Integer, ForeignKey("netatmodevice.id"), nullable=False)
+    start = Column(DateTime, nullable=False, index=True)
+    end = Column(DateTime, nullable=False, index=True)
+    reading = Column(Float, nullable=False)
+    relay: NetatmoDevice = relationship("NetatmoDevice", back_populates="readings")
+    idxOneReading = Index("ix_one_reading", id, room_id, start, unique=True)

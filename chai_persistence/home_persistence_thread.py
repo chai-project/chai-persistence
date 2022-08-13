@@ -4,14 +4,13 @@
 import threading
 from logging import debug
 
-from chai_data_sources import EfergyMeter, Minutes, NetatmoClient
+from chai_data_sources import Minutes, NetatmoClient
 from chai_data_sources.exceptions import NetatmoError
 from pause import until
 from pendulum import now, datetime
 from sqlalchemy.orm import Session, scoped_session
 
-from chai_persistence.db_definitions import EfergyReading, NetatmoReading, db_session, Home
-from chai_persistence.efergy_meter_thread import EfergyMeterThread
+from chai_persistence.db_definitions import NetatmoReading, db_session, Home
 
 
 class HomePersistenceThread(threading.Thread):
@@ -19,20 +18,16 @@ class HomePersistenceThread(threading.Thread):
     regularly for the stopped() condition."""
 
     _stop_event: threading.Event
-    _efergy_thread: EfergyMeterThread
     _relay: NetatmoClient
     _home_db_id: int
     _st_session: scoped_session
     _interval: Minutes
     _tz: str = "Europe/London"
 
-    def __init__(self, *, meter: EfergyMeter, relay: NetatmoClient,
-                 home_db_id: int, st_session: scoped_session, interval: Minutes = Minutes.MIN_5):
+    def __init__(self, *,
+                 relay: NetatmoClient, home_db_id: int, st_session: scoped_session, interval: Minutes = Minutes.MIN_5):
         super().__init__()
         self._stop_event = threading.Event()
-        # self._efergy_token = efergy_token
-        # self._netatmo_token = netatmo_refresh_token
-        self._efergy_thread = EfergyMeterThread(meter)
         self._relay = relay
         self._home_db_id = home_db_id
         self._st_session = st_session
@@ -46,13 +41,11 @@ class HomePersistenceThread(threading.Thread):
     def run(self):
         """ Start the execution of this thread in a blocking way. Call `start()` instead for a non-blocking thread. """
         debug("starting run for home with DB id %s", self._home_db_id)
-        self._efergy_thread.start()
         bootstrapped = False
 
         while True:
             if self.stopped:
-                print("stopped")
-                self._efergy_thread.stop()
+                print(f"  stopped thread for home with ID {self._home_db_id}")
                 break
 
             # thread is still active, we can continue
@@ -66,48 +59,54 @@ class HomePersistenceThread(threading.Thread):
                 # wait until the middle of an interval, either the current one or the next one
                 middle = current_middle if time < current_middle else current_middle.add(minutes=self._interval.value)
                 bootstrapped = True
-                print(f"range: {current_start} – {current_end}")
-                print(f"waiting until {middle.isoformat()} before continuing to align the logging")
+
+                debug("range:  %s – %s", current_start.isoformat(), current_end.isoformat())
+                debug("waiting until %s before continuing to align the logging", middle.isoformat())
                 until(middle.int_timestamp)
-                print("bootstrap complete")
+                debug("bootstrap complete")
                 continue
 
-            print("performing data polling")
+            debug("performing data polling")
 
             session: Session
             with db_session(self._st_session) as session:
                 home: Home = session.query(Home).filter_by(id=self._home_db_id).one()
-                print("got the home")
+                debug("got the home instance")
                 try:
                     value = self._relay.thermostat_temperature
-                    entry = NetatmoReading(relay=home.relay,
-                                           start=current_start, end=current_end,
-                                           room_type=1, reading=value)
-                    print("prepared thermostat reading")
+                    # noinspection PyTypeChecker
+                    # ignore the warnings; DateTime is a datetime.datetime (compatible) instance
+                    entry = NetatmoReading(room_id=1, relay=home.relay,
+                                           start=current_start, end=current_end, reading=value)
+                    debug("prepared thermostat reading")
                     session.add(entry)
-                    print("stored thermostat reading")
+                    debug("stored thermostat reading")
                 except NetatmoError:
                     pass
                 try:
                     value = self._relay.valve_temperature
-                    entry = NetatmoReading(relay=home.relay,
-                                           start=current_start, end=current_end,
-                                           room_type=2, reading=value)
-                    print("prepared valve reading")
+                    # noinspection PyTypeChecker
+                    # ignore the warnings; DateTime is a datetime.datetime (compatible) instance
+                    entry = NetatmoReading(room_id=2, relay=home.relay,
+                                           start=current_start, end=current_end, reading=value)
+                    debug("prepared valve reading")
                     session.add(entry)
-                    print("stored valve reading")
+                    debug("stored valve reading")
                 except NetatmoError:
                     pass
-                power_usage = self._efergy_thread.get_interval(self._interval)
-                if power_usage:
-                    entry = EfergyReading(meter=home.meter,
-                                          start=power_usage.start, end=power_usage.end,
-                                          reading=power_usage.value)
-                    print("prepared efergy reading")
+                try:
+                    value = self._relay.valve_percentage
+                    # noinspection PyTypeChecker
+                    # ignore the warnings; DateTime is a datetime.datetime (compatible) instance
+                    entry = NetatmoReading(room_id=3, relay=home.relay,
+                                           start=current_start, end=current_end, reading=value)
+                    debug("prepared valve status reading")
                     session.add(entry)
-                    print("stored efergy reading")
-                print("storing in DB")
-            print(f"next polling at {current_middle.add(minutes=self._interval.value)}")
+                    debug("stored valve status reading")
+                except NetatmoError:
+                    pass
+                debug("storing in DB")
+            debug(f"next polling at %s", current_middle.add(minutes=self._interval.value).isoformat())
             until(current_middle.add(minutes=self._interval.value).int_timestamp)
 
     def stop(self):

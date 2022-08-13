@@ -1,0 +1,12 @@
+# Provide the settings for the persistence layer.
+
+[netatmo]
+id     = "client_id"
+secret = "client_top_secret"
+
+[database]
+server = "127.0.0.1"
+dbname = "chai"
+user   = "persistence_access"
+pass   = "db_password_here"
+debug  = false
