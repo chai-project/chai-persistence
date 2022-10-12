@@ -69,7 +69,7 @@ class Home(Base):
     __tablename__ = "home"
     id = Column(Integer, primary_key=True)
     label = Column(String, nullable=False)
-    revision = Column(TIMESTAMP, nullable=False)
+    revision = Column(TIMESTAMP(timezone=True), nullable=False)
     netatmoID = Column("netatmoid", Integer, ForeignKey("netatmodevice.id"), nullable=False)
     relay: NetatmoDevice = relationship("NetatmoDevice")
 
@@ -79,8 +79,8 @@ class NetatmoReading(Base):
     id = Column(Integer, primary_key=True)
     room_id = Column("roomid", Integer, nullable=False)  # 1 for thermostat temp, 2 for valve temp, 3 for valve %
     netatmo_id = Column("netatmoid", Integer, ForeignKey("netatmodevice.id"), nullable=False)
-    start = Column(DateTime, nullable=False, index=True)
-    end = Column(DateTime, nullable=False, index=True)
+    start = Column(DateTime(timezone=True), nullable=False, index=True)
+    end = Column(DateTime(timezone=True), nullable=False, index=True)
     reading = Column(Float, nullable=False)
     relay: NetatmoDevice = relationship("NetatmoDevice", back_populates="readings")
     idxOneReading = Index("ix_one_reading", id, room_id, start, unique=True)
