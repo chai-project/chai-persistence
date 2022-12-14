@@ -85,7 +85,7 @@ class HomePersistenceThread(threading.Thread):
                     except NetatmoError:
                         pass
                     try:
-                        value = self._relay.valve_temperature
+                        value = self._relay.t3_temperature
                         # noinspection PyTypeChecker
                         # ignore the warnings; DateTime is a datetime.datetime (compatible) instance
                         entry = NetatmoReading(room_id=2, relay=home.relay,
