@@ -21,12 +21,11 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO)
 
 # get all the current homes (and periodically check for changes)
-# store home instances so that they can be used for both automated logging
+# store home instances so that they can be used for automated logging
 
 # for every participant:
 #   log the temperature for both valve and thermostat
 #   log the valve open status as a percentage
-#   fix temperature use gaps with periodic checks
 
 
 class Configuration:  # pylint: disable=too-few-public-methods, too-many-instance-attributes
