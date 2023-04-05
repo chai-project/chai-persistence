@@ -144,6 +144,8 @@ def run(settings: Configuration, sleep_duration: int):
 
     while True:
         print("  checking homes for any changes")
+
+        # retrieve all homes, and only the most recent revision of each home
         session: Session
         with db_session(st_session) as session:
             home_alias = aliased(Home)
